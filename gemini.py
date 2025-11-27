@@ -194,7 +194,10 @@ def get_jwt_for_account(account: dict, proxy: str) -> str:
     }
 
     resp = requests.get(url, headers=headers, proxies=proxies, verify=False, timeout=30)
-
+    # 检查响应状态
+    if resp.status_code != 200:
+        raise Exception(f"获取xsrfToken失败: {resp.status_code} {resp.text}")
+    
     # 处理Google安全前缀
     text = resp.text
     if text.startswith(")]}'\n") or text.startswith(")]}'"): 
@@ -495,7 +498,7 @@ def health_check():
     return jsonify({"status": "ok", "timestamp": datetime.now().isoformat()})
 
 
-@app.route('/v1/status', methods=['GET'])
+@app.route('/api/status', methods=['GET'])
 def system_status():
     """获取系统状态"""
     total, available = account_manager.get_account_count()
@@ -519,10 +522,15 @@ def system_status():
 # ==================== 管理接口 ====================
 
 @app.route('/')
+@app.route('/index.html')
 def index():
     """返回管理页面"""
     return send_from_directory('.', 'index.html')
 
+@app.route('/chat_history.html')
+def chat_history():
+    """返回聊天记录页面"""
+    return send_from_directory('.', 'chat_history.html')
 
 @app.route('/api/accounts', methods=['GET'])
 def get_accounts():
@@ -639,7 +647,7 @@ def toggle_account(account_id):
     return jsonify({"success": True, "available": not current})
 
 
-@app.route('/api/accounts/<int:account_id>/test', methods=['POST'])
+@app.route('/api/accounts/<int:account_id>/test', methods=['GET'])
 def test_account(account_id):
     """测试账号JWT获取"""
     if account_id < 0 or account_id >= len(account_manager.accounts):
